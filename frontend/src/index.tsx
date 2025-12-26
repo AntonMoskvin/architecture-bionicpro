@@ -1,14 +1,25 @@
+// frontend/src/index.tsx
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
+import { createRoot } from 'react-dom/client';
+import Keycloak from 'keycloak-js';
 import App from './App';
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
+const keycloak = new Keycloak({
+    url: 'http://localhost:8080',
+    realm: 'reports-realm',
+    clientId: 'reports-frontend'
+});
 
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+keycloak.init({
+    onLoad: 'login-required',
+    pkceMethod: 'S256'
+}).then((authenticated) => {
+    // Сохраняем в глобальную переменную для отладки
+    (window as any).keycloak = keycloak;
+
+    const root = createRoot(document.getElementById('root')!);
+    root.render(<App keycloak={keycloak} authenticated={authenticated} />);
+}).catch(error => {
+    console.error('Keycloak init failed', error);
+    alert('Authentication failed');
+});

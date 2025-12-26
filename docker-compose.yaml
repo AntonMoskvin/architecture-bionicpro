@@ -20,7 +20,7 @@ services:
       KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak_db
       KC_DB_USERNAME: keycloak_user
       KC_DB_PASSWORD: keycloak_password
-    command: 
+    command:
       - start-dev
       - --import-realm
     volumes:
@@ -36,7 +36,37 @@ services:
     ports:
       - "3000:3000"
     environment:
-      REACT_APP_API_URL: http://localhost:8000
+      REACT_APP_API_URL: http://localhost:8001
       REACT_APP_KEYCLOAK_URL: http://localhost:8080
       REACT_APP_KEYCLOAK_REALM: reports-realm
       REACT_APP_KEYCLOAK_CLIENT_ID: reports-frontend
+
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: bionicpro
+      POSTGRES_USER: bionicpro
+      POSTGRES_PASSWORD: bionicpro
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.3
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+
+  reports-service:
+    build:
+      context: ./reports-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    depends_on:
+      - clickhouse
+      - keycloak
+
+volumes:
+  clickhouse_data:
