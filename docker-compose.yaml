@@ -41,6 +41,74 @@ services:
       REACT_APP_KEYCLOAK_REALM: reports-realm
       REACT_APP_KEYCLOAK_CLIENT_ID: reports-frontend
 
+  airflow_db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow-init:
+    image: apache/airflow:2.8.1
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__FERNET_KEY: "A6lt5qr70SUqf_PiFqY9XggNZJq44aNR8lC3nc8uZNc="
+      _PIP_ADDITIONAL_REQUIREMENTS: clickhouse-driver
+    depends_on:
+      airflow_db:
+        condition: service_healthy
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    command:
+      - bash
+      - -c
+      - |
+        airflow db init &&
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+
+  airflow:
+    image: apache/airflow:2.8.1
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__FERNET_KEY: "A6lt5qr70SUqf_PiFqY9XggNZJq44aNR8lC3nc8uZNc=="
+      _PIP_ADDITIONAL_REQUIREMENTS: clickhouse-driver
+    depends_on:
+      airflow_db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    ports:
+      - "8081:8080"
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__FERNET_KEY: "A6lt5qr70SUqf_PiFqY9XggNZJq44aNR8lC3nc8uZNc="
+      _PIP_ADDITIONAL_REQUIREMENTS: clickhouse-driver
+    depends_on:
+      airflow_db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    command: scheduler
+
   db:
     image: postgres:14
     environment:
@@ -67,6 +135,3 @@ services:
     depends_on:
       - clickhouse
       - keycloak
-
-volumes:
-  clickhouse_data:

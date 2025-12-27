@@ -5,7 +5,7 @@
     OLAP-база: ClickHouse  
     Аутентификация: Keycloak 21.1  
     Фронтенд: React + TypeScript
-
+    ETL выполняется через Airflow DAG
 🚀 Быстрый старт
 Требования
 
@@ -16,44 +16,25 @@
 
 Запуск проекта
 
-    1.Установите зависимости фронтенда (требуется для генерации package-lock.json):
-
-```
-cd frontend
-npm install
-cd ..
-```
-
-    2.Соберите и запустите все сервисы:
-
-```
-docker-compose build frontend
-docker-compose up -d
-```
-
-    3.Инициализация ClickHouse
-    Перед первым использованием необходимо вставить тестовые данные.
-
-    Зайдите в Keycloak Admin: http://localhost:8080
-     → admin / admin
-    Перейдите в reports-realm → Users → prothetic1 → скопируйте ID пользователя
-    Откройте файл clickhouse/init.sql и замените YOUR_USER_ID на скопированный ID
-    Выполните инициализацию:
-
-```
-# Windows (PowerShell)
-Get-Content clickhouse\init.sql | docker exec -i architecture-bionicpro-clickhouse-1 clickhouse-client --multiquery
+    # 1. Установите зависимости фронтенда
+    cd frontend
+    npm install
+    cd ..
+    
+    # 2. Очистите всё (если запускали раньше)
+    docker-compose down -v --remove-orphans
+    
+    # 3. Пересоберите и запустите
+    docker-compose build frontend
+    docker-compose up -d
 ```
 
 Доступные сервисы:
 
     Фронтенд: http://localhost:3000
       
-    Keycloak Admin: http://localhost:8080
-     (admin / admin)  
-    API Docs (Swagger): http://localhost:8001/docs
-      
-    ClickHouse: порт 9000
+    Keycloak Admin: http://localhost:8081
+     (admin / admin)
 
 Тестовые пользователи:
 
@@ -75,21 +56,10 @@ Get-Content clickhouse\init.sql | docker exec -i architecture-bionicpro-clickhou
     "avg_latency_ms": 82.7
     }
 
-Проверка API напрямую
-
-    1.Получите токен через DevTools → Console: copy(window.keycloak.token)
-    2.Выполните запрос: curl.exe -H "Authorization: Bearer <ВАШ_ТОКЕН>" http://localhost:8001/reports
-    3.Ожидаемый результат: JSON с отчётом.
-
 Проверка данных в ClickHouse
-
-    docker exec -i architecture-bionicpro-clickhouse-1 clickhouse-client --query "
-    SELECT * FROM reports.user_reports;
-    "
+    docker exec -i architecture-bionicpro-clickhouse-1 clickhouse-client --query="SELECT * FROM reports.user_reports;"
 
 Очистка и перезапуск
-
-
     # Остановить все сервисы и удалить тома
     docker-compose down -v
     
